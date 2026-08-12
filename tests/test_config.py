@@ -1,6 +1,6 @@
 """Tests for config loading."""
 
-from armtune.config import Objective, QuantizationFormat, load_all_profiles, Profile
+from armtune.config import Objective, Profile, QuantizationFormat
 
 
 def test_objective_enum():

@@ -1,6 +1,6 @@
 """Tests for hardware detection."""
 
-from armtune.detect.models import CPUInfo, HardwareInfo, MemoryInfo, NUMAInfo, GPUInfo
+from armtune.detect.models import CPUInfo, GPUInfo, HardwareInfo, MemoryInfo, NUMAInfo
 
 
 def test_cpu_info_defaults():

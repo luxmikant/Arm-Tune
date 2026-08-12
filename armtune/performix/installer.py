@@ -51,11 +51,11 @@ def ensure_performix() -> Path:
         if result.returncode != 0:
             raise RuntimeError(f"Performix binary check failed: {result.stderr}")
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to install Arm Performix CLI: {e}\n"
-            "Manual install: download from https://developer.arm.com/servers-and-cloud-computing/"
-            "arm-performix and extract to ~/.armtune/performix/"
-        )
+            raise RuntimeError(
+                f"Failed to install Arm Performix CLI: {e}\n"
+                "Manual install: download from https://developer.arm.com/servers-and-cloud-computing/"
+                "arm-performix and extract to ~/.armtune/performix/"
+            ) from e
 
     return PERFORMIX_BIN
 

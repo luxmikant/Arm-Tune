@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from ..config import Objective, Profile
+from ..config import Profile
 from ..detect.detector import detect_hardware
 from ..performix.models import PerformixProfile
 from ..performix.profiler import run_performix_sample
@@ -139,7 +139,7 @@ class BenchmarkOrchestrator:
         avg_tps = (
             statistics.mean([
                 tokens / lat
-                for tokens, lat in zip(completion_tokens_list, latencies)
+                for tokens, lat in zip(completion_tokens_list, latencies, strict=False)
                 if lat > 0 and tokens > 0
             ])
             if completion_tokens_list else 0.0

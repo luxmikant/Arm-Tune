@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 import time
-from pathlib import Path
+from importlib.util import find_spec
 
 from .base import GenerationRequest, GenerationResponse, RuntimeAdapter
 
@@ -33,11 +33,11 @@ class LlamaCppAdapter(RuntimeAdapter):
     def initialize(self) -> None:
         try:
             from llama_cpp import Llama  # type: ignore[import-untyped]
-        except ImportError:
+        except ImportError as e:
             raise RuntimeError(
                 "llama-cpp-python is not installed. "
                 "Install with: pip install llama-cpp-python"
-            )
+            ) from e
 
         if not self._model_path or not os.path.exists(self._model_path):
             raise FileNotFoundError(f"Model not found: {self._model_path}")
@@ -96,11 +96,7 @@ class LlamaCppAdapter(RuntimeAdapter):
         self._pid = None
 
     def is_available(self) -> bool:
-        try:
-            import llama_cpp  # type: ignore[import-untyped]
-            return True
-        except ImportError:
-            return False
+        return find_spec("llama_cpp") is not None
 
 
 __all__ = ["LlamaCppAdapter"]

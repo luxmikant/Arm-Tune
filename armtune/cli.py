@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
@@ -13,10 +11,11 @@ from rich.table import Table
 
 from . import __version__
 from .analyze.recommender import RecommendationEngine
+from .benchmark.metrics import BenchmarkMetrics
 from .benchmark.orchestrator import BenchmarkOrchestrator, BenchmarkResult, RunResult
 from .config import Objective, load_all_profiles, load_profile
 from .detect.detector import detect_hardware
-from .performix.installer import ensure_performix, is_performix_available
+from .performix.installer import is_performix_available
 from .prompts.loader import load_prompts
 from .report.generator import ReportGenerator
 from .runtime.factory import get_runtime_adapter
@@ -36,7 +35,7 @@ def version_callback(value: bool) -> None:
 
 @app.callback()
 def main(
-    version: Optional[bool] = typer.Option(  # noqa: B008
+    version: bool | None = typer.Option(  # noqa: B008
         None, "--version", callback=version_callback, help="Show version."
     ),
 ) -> None:
@@ -188,7 +187,56 @@ def recommend(
     data = json.loads(json_file.read_text(encoding="utf-8"))
     console.print(f"[green]Loaded results from {json_file}[/]")
 
-    console.print("\nRun benchmarks first to get recommendations.")
+    obj = Objective(objective)
+    engine = RecommendationEngine()
+    result_list = data.get("results", [])
+    if not result_list:
+        console.print("[yellow]No benchmark results in file.[/]")
+        raise typer.Exit(0)
+
+    runs: list[RunResult] = []
+    for r in result_list:
+        m = r.get("metrics", {})
+        bm = BenchmarkMetrics(
+            p50_latency_seconds=m.get("p50_latency_seconds", 0),
+            p95_latency_seconds=m.get("p95_latency_seconds", 0),
+            tokens_per_second=m.get("tokens_per_second", 0),
+            aggregate_tokens_per_second=m.get("aggregate_tokens_per_second", 0),
+            peak_memory_mb=m.get("peak_memory_mb", 0),
+            avg_quality_score=m.get("avg_quality_score", r.get("avg_quality_score", 1)),
+            total_requests=m.get("total_requests", 0),
+            successful_requests=m.get("successful_requests", 0),
+        )
+        runs.append(RunResult(
+            label=r.get("profile_name", "unknown"),
+            metrics=bm,
+            quality_scores=r.get("quality_scores", []),
+        ))
+
+    rec = engine.recommend(runs, obj)
+
+    table = Table(title=f"Recommendation — {objective}")
+    table.add_column("Rank", style="cyan")
+    table.add_column("Config", style="green")
+    table.add_column("P50 (s)", style="yellow")
+    table.add_column("tok/s", style="yellow")
+    table.add_column("RAM (MB)", style="yellow")
+    table.add_column("Quality", style="yellow")
+
+    for rank, entry in enumerate(rec.ranked_results, 1):
+        marker = " *" if entry["label"] == rec.recommended_label else ""
+        table.add_row(
+            str(rank),
+            entry["label"] + marker,
+            str(round(entry["p50_latency_s"], 3)),
+            str(round(entry["throughput_tok_s"], 1)),
+            str(round(entry["peak_memory_mb"], 0)),
+            str(round(entry["quality_score"], 2)),
+        )
+
+    console.print(table)
+    console.print(f"\n[bold]Recommended:[/] {rec.recommended_label}")
+    console.print(rec.reasoning)
 
 
 @app.command()

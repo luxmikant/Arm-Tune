@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import json
 import subprocess
 import time
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Iterator
 
 from .installer import ensure_performix, is_performix_available
-from .models import PerformixBottleneck, PerformixPerfCounters, PerformixProfile
+from .models import PerformixProfile
 from .parser import parse_performix_output
 
 
