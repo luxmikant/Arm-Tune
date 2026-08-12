@@ -1,0 +1,27 @@
+[
+    {
+        "system": "You are a support-ticket classifier. Return ONLY valid JSON with keys: summary, category, priority, recommended_action.",
+        "instruction": "Classify this support ticket and generate a structured summary.",
+        "ticket": "User reports being charged twice for the same subscription. Invoice #4521 dated Jan 15 and Invoice #4522 dated Jan 16 both show $49.99."
+    },
+    {
+        "system": "You are a support-ticket classifier. Return ONLY valid JSON with keys: summary, category, priority, recommended_action.",
+        "instruction": "Classify this support ticket and generate a structured summary.",
+        "ticket": "Cannot log in to the dashboard after password reset. Email verification link returns 'token expired' error."
+    },
+    {
+        "system": "You are a support-ticket classifier. Return ONLY valid JSON with keys: summary, category, priority, recommended_action.",
+        "instruction": "Classify this support ticket and generate a structured summary.",
+        "ticket": "API latency increased from 200ms to 800ms after the latest deployment. Affected endpoint: /api/v1/search."
+    },
+    {
+        "system": "You are a support-ticket classifier. Return ONLY valid JSON with keys: summary, category, priority, recommended_action.",
+        "instruction": "Classify this support ticket and generate a structured summary.",
+        "ticket": "Suspicious login attempts from IP 203.0.113.42. 5 failed attempts in 10 minutes. Account locked."
+    },
+    {
+        "system": "You are a support-ticket classifier. Return ONLY valid JSON with keys: summary, category, priority, recommended_action.",
+        "instruction": "Classify this support ticket and generate a structured summary.",
+        "ticket": "Request to add dark mode to the dashboard. Current light theme causes eye strain for nighttime users."
+    }
+]
