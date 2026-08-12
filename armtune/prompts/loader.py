@@ -50,30 +50,35 @@ def _default_prompts() -> list[str]:
             "ticket": "User reports being charged twice for the same subscription. "
                       "Invoice #4521 dated Jan 15 and Invoice #4522 dated Jan 16 "
                       "both show $49.99.",
+            "expected_category": "billing",
         }),
         json.dumps({
             "system": "You are a support-ticket classifier. Return ONLY valid JSON.",
             "instruction": "Classify this ticket and summarize.",
             "ticket": "Cannot log in to the dashboard after password reset. "
                       "Email verification link returns 'token expired' error.",
+            "expected_category": "technical",
         }),
         json.dumps({
             "system": "You are a support-ticket classifier. Return ONLY valid JSON.",
             "instruction": "Classify this ticket and summarize.",
             "ticket": "API latency increased from 200ms to 800ms after the "
                       "latest deployment. Affected endpoint: /api/v1/search.",
+            "expected_category": "performance",
         }),
         json.dumps({
             "system": "You are a support-ticket classifier. Return ONLY valid JSON.",
             "instruction": "Classify this ticket and summarize.",
             "ticket": "Suspicious login attempts from IP 203.0.113.42. "
                       "5 failed attempts in 10 minutes. Account locked.",
+            "expected_category": "security",
         }),
         json.dumps({
             "system": "You are a support-ticket classifier. Return ONLY valid JSON.",
             "instruction": "Classify this ticket and summarize.",
             "ticket": "Request to add dark mode to the dashboard. "
                       "Current light theme causes eye strain for nighttime users.",
+            "expected_category": "feature_request",
         }),
     ]
 

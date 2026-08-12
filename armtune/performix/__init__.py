@@ -2,7 +2,7 @@
 
 from .installer import ensure_performix, get_performix_path, is_performix_available
 from .models import PerformixBottleneck, PerformixPerfCounters, PerformixProfile
-from .profiler import attach_profile, profile_process, run_performix_sample
+from .profiler import PerformixCapture, get_performix_version
 
 __all__ = [
     "ensure_performix",
@@ -11,7 +11,6 @@ __all__ = [
     "PerformixProfile",
     "PerformixPerfCounters",
     "PerformixBottleneck",
-    "attach_profile",
-    "profile_process",
-    "run_performix_sample",
+    "PerformixCapture",
+    "get_performix_version",
 ]

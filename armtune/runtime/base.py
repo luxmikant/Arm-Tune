@@ -23,6 +23,7 @@ class GenerationResponse:
     ttft_seconds: float = 0.0
     total_seconds: float = 0.0
     tokens_per_second: float = 0.0
+    prompt_tokens_per_second: float = 0.0
 
 
 class RuntimeAdapter(ABC):

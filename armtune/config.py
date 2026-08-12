@@ -24,13 +24,24 @@ class Objective(str, Enum):
 
 class QuantizationFormat(str, Enum):
     Q2_K = "Q2_K"
+    Q2_K_L = "Q2_K_L"
+    Q3_K_S = "Q3_K_S"
     Q3_K_M = "Q3_K_M"
+    Q3_K_L = "Q3_K_L"
+    Q4_0 = "Q4_0"
+    Q4_1 = "Q4_1"
+    Q4_K_S = "Q4_K_S"
     Q4_K_M = "Q4_K_M"
+    Q5_K_S = "Q5_K_S"
     Q5_K_M = "Q5_K_M"
     Q6_K = "Q6_K"
     Q8_0 = "Q8_0"
+    IQ4_NL = "IQ4_NL"
+    IQ4_XS = "IQ4_XS"
     F16 = "F16"
     F32 = "F32"
+    BF16 = "BF16"
+    UNKNOWN = "UNKNOWN"
 
 
 class ModelConfig(BaseModel):
@@ -46,7 +57,9 @@ class ModelConfig(BaseModel):
 
 class RuntimeConfig(BaseModel):
     threads: int = Field(default=4, ge=1)
+    batch_threads: int = Field(default=0, ge=0)
     concurrency: int = Field(default=1, ge=1)
+    runtime_backend: str = "auto"
     enable_prompt_cache: bool = False
     enable_mmap: bool = True
     enable_mlock: bool = False
@@ -55,6 +68,7 @@ class RuntimeConfig(BaseModel):
 class BenchmarkConfig(BaseModel):
     warmup_requests: int = 2
     measurement_requests: int = 10
+    repetitions: int = Field(default=1, ge=1)
     max_tokens: int = 256
     temperature: float = 0.0
     seed: int = 42

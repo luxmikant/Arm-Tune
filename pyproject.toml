@@ -28,6 +28,8 @@ dependencies = [
     "matplotlib>=3.7",
     "pandas>=2.0",
     "pyyaml>=6.0",
+    "httpx>=0.25",
+    "huggingface_hub>=0.20",
 ]
 
 [project.optional-dependencies]
@@ -36,6 +38,9 @@ dev = [
     "pytest-cov>=4.1",
     "ruff>=0.1",
     "mypy>=1.7",
+]
+dashboard = [
+    "gradio>=4.0",
 ]
 
 [project.scripts]

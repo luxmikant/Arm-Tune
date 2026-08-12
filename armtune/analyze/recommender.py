@@ -17,6 +17,7 @@ class Recommendation:
     metrics_summary: dict[str, Any] = field(default_factory=dict)
     ranked_results: list[dict[str, Any]] = field(default_factory=list)
     performix_insights: list[str] = field(default_factory=list)
+    launch_command: str = ""
 
 
 class RecommendationEngine:

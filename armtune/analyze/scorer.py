@@ -27,6 +27,12 @@ class QualityScorer:
         if parsed is None:
             return 0.1
 
+        expected = {}
+        if prompt:
+            expected_data = self._extract_json(prompt)
+            if expected_data is not None:
+                expected = expected_data
+
         score = 0.0
         weight = 1.0 / len(self.EXPECTED_KEYS)
 
@@ -42,6 +48,9 @@ class QualityScorer:
             elif key == "category":
                 if value.lower() in self.VALID_CATEGORIES:
                     score += weight
+                    expected_value = str(expected.get("expected_category", "")).lower()
+                    if expected_value and value.lower() == expected_value:
+                        score += weight
             elif key == "summary":
                 if len(value.strip()) > 5:
                     score += weight * 0.9

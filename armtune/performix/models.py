@@ -39,6 +39,10 @@ class PerformixProfile(BaseModel):
     counters: PerformixPerfCounters = Field(default_factory=PerformixPerfCounters)
     bottlenecks: list[PerformixBottleneck] = Field(default_factory=list)
     raw_json: str = ""
+    status: str = "unavailable"
+    command: str = ""
+    version: str = ""
+    stderr: str = ""
 
     def is_empty(self) -> bool:
-        return self.sample_count == 0
+        return self.sample_count == 0 and not self.raw_json

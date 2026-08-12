@@ -13,14 +13,22 @@ on:
           - low-latency
           - high-throughput
           - low-memory
-      model:
+      repo:
         description: HuggingFace GGUF repo
         type: string
         default: unsloth/Llama-3.2-1B-Instruct-GGUF
-      model_file:
-        description: GGUF filename
+      quant:
+        description: Quantization (csv)
         type: string
-        default: Llama-3.2-1B-Instruct-Q4_K_M.gguf
+        default: Q4_K_M,Q4_0,Q8_0
+      threads:
+        description: Thread sweep (csv)
+        type: string
+        default: 1,2,4
+      concurrency:
+        description: Concurrency sweep (csv)
+        type: string
+        default: 1,2
   schedule:
     - cron: "0 8 * * 1"
 
@@ -31,7 +39,7 @@ permissions:
 jobs:
   benchmark:
     runs-on: ubuntu-24.04-arm
-    timeout-minutes: 60
+    timeout-minutes: 90
 
     steps:
       - uses: actions/checkout@v5
@@ -42,99 +50,81 @@ jobs:
       - name: Create results directory
         run: mkdir -p results
 
-      # ---------- Hardware inventory ----------
       - name: Record hardware inventory
         run: |
-          echo "=== uname -a ==="               | tee results/hardware-inventory.txt
-          uname -a                                | tee -a results/hardware-inventory.txt
-          echo ""                                 | tee -a results/hardware-inventory.txt
-          echo "=== lscpu ==="                   | tee -a results/hardware-inventory.txt
-          lscpu 2>&1                              | tee -a results/hardware-inventory.txt
-          echo ""                                 | tee -a results/hardware-inventory.txt
-          echo "=== free -h ==="                 | tee -a results/hardware-inventory.txt
-          free -h                                 | tee -a results/hardware-inventory.txt
-          echo ""                                 | tee -a results/hardware-inventory.txt
-          echo "=== nproc ==="                   | tee -a results/hardware-inventory.txt
-          nproc                                   | tee -a results/hardware-inventory.txt
-          echo ""                                 | tee -a results/hardware-inventory.txt
-          echo "=== /proc/cpuinfo (header) ==="  | tee -a results/hardware-inventory.txt
-          head -80 /proc/cpuinfo 2>&1             | tee -a results/hardware-inventory.txt
-          echo ""                                 | tee -a results/hardware-inventory.txt
-          echo "=== NUMA ==="                    | tee -a results/hardware-inventory.txt
-          numactl --hardware 2>&1                 | tee -a results/hardware-inventory.txt || true
-          echo ""                                 | tee -a results/hardware-inventory.txt
-          echo "=== /proc/meminfo (header) ==="  | tee -a results/hardware-inventory.txt
-          head -20 /proc/meminfo 2>&1             | tee -a results/hardware-inventory.txt
+          {
+            echo "=== uname -a ==="; uname -a
+            echo ""; echo "=== lscpu ==="; lscpu 2>&1 || true
+            echo ""; echo "=== free -h ==="; free -h
+            echo ""; echo "=== nproc ==="; nproc
+            echo ""; echo "=== NUMA ==="; numactl --hardware 2>&1 || true
+            echo ""; echo "=== /proc/cpuinfo (header) ==="; head -80 /proc/cpuinfo
+          } | tee results/hardware-inventory.txt
 
-      # ---------- System deps ----------
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq numactl hwloc 2>/dev/null || true
+          sudo apt-get install -y -qq cmake gcc g++ build-essential numactl hwloc 2>/dev/null || true
 
-      # ---------- Python + package ----------
       - name: Install Python package
         run: |
           python -m pip install --upgrade pip
           pip install -e .
 
-      # ---------- Arm Performix ----------
       - name: Install Arm Performix CLI
         run: bash scripts/install-performix.sh
         continue-on-error: true
 
-      - name: Verify Performix
-        run: |
-          if [ -x "$HOME/.armtune/performix/ArmPerformix" ]; then
-            "$HOME/.armtune/performix/ArmPerformix" --version 2>&1 || echo "(version check: not available)"
-          else
-            echo "Arm Performix not installed — continuing without hardware counter profiling."
-          fi
-        continue-on-error: true
+      - name: Cache llama.cpp build
+        id: cache-llama
+        uses: actions/cache@v4
+        with:
+          path: llama.cpp/build-*
+          key: llama-cpp-build-${{ runner.arch }}-${{ hashFiles('scripts/build-llama-cpp.sh') }}
 
-      # ---------- llama-cpp ----------
-      - name: Install llama-cpp-python (ARM64)
-        run: |
-          pip install llama-cpp-python 2>&1 || echo "LLAMA_NOT_AVAILABLE=true" >> "$GITHUB_ENV"
-        continue-on-error: true
+      - name: Build llama.cpp (KleidiAI + generic)
+        if: steps.cache-llama.outputs.cache-hit != 'true'
+        run: bash scripts/build-llama-cpp.sh
+        timeout-minutes: 40
 
-      # ---------- Model download ----------
-      - name: Download model
-        id: model
+      - name: Download models from Hugging Face
         run: |
-          REPO="${{ inputs.model || 'unsloth/Llama-3.2-1B-Instruct-GGUF' }}"
-          FILE="${{ inputs.model_file || 'Llama-3.2-1B-Instruct-Q4_K_M.gguf' }}"
-          bash scripts/download-model.sh models "$REPO" "$FILE" && echo "MODEL_PATH=models/$FILE" >> "$GITHUB_ENV" || echo "MODEL_DOWNLOAD_FAILED=true" >> "$GITHUB_ENV"
-        continue-on-error: true
+          for q in $(echo "${{ inputs.quant || 'Q4_K_M,Q4_0,Q8_0' }}" | tr ',' ' '); do
+            armtune models pull "${{ inputs.repo || 'unsloth/Llama-3.2-1B-Instruct-GGUF' }}" --quant "$q" --output models
+          done
         timeout-minutes: 15
 
-      # ---------- Hardware detect (CLI) ----------
       - name: ArmTune detect
         run: armtune detect --json | tee results/hardware.json
 
-      # ---------- Benchmarks ----------
-      - name: Run baseline benchmark
+      # ---------- Baseline: generic build ----------
+      - name: Run generic (baseline) benchmark
         run: |
-          if [ -n "$MODEL_PATH" ] && [ -f "$MODEL_PATH" ]; then
-            armtune benchmark --profile configs/baseline.yaml --output results
-          else
-            echo "No model available — running mock benchmark."
-            armtune benchmark --profile configs/baseline.yaml --output results || true
-            echo "MOCK_BENCHMARK=true" >> "$GITHUB_ENV"
-          fi
+          export ARMTUNE_LLAMA_SERVER="llama.cpp/build-generic/bin/llama-server"
+          armtune benchmark \
+            --profile configs/baseline.yaml \
+            --repo "${{ inputs.repo || 'unsloth/Llama-3.2-1B-Instruct-GGUF' }}" \
+            --quant "${{ inputs.quant || 'Q4_K_M,Q4_0,Q8_0' }}" \
+            --threads "${{ inputs.threads || '1,2,4' }}" \
+            --concurrency "${{ inputs.concurrency || '1,2' }}" \
+            --output results
         continue-on-error: true
+        timeout-minutes: 25
 
-      - name: Run optimized benchmark
+      # ---------- Optimized: KleidiAI native build ----------
+      - name: Run Arm-optimized benchmark
         run: |
-          PROFILE="configs/${{ inputs.profile || 'balanced' }}.yaml"
-          if [ -f "$PROFILE" ]; then
-            armtune benchmark --profile "$PROFILE" --output results || true
-          else
-            echo "Profile $PROFILE not found — skipping."
-          fi
+          export ARMTUNE_LLAMA_SERVER="llama.cpp/build-arm-opt/bin/llama-server"
+          armtune benchmark \
+            --profile "configs/${{ inputs.profile || 'balanced' }}.yaml" \
+            --repo "${{ inputs.repo || 'unsloth/Llama-3.2-1B-Instruct-GGUF' }}" \
+            --quant "${{ inputs.quant || 'Q4_K_M,Q4_0,Q8_0' }}" \
+            --threads "${{ inputs.threads || '1,2,4' }}" \
+            --concurrency "${{ inputs.concurrency || '1,2' }}" \
+            --output results
         continue-on-error: true
+        timeout-minutes: 25
 
-      # ---------- Analysis ----------
       - name: Generate recommendation
         run: armtune recommend --latest --results results || true
         continue-on-error: true
@@ -143,7 +133,6 @@ jobs:
         run: armtune report --latest --results results || true
         continue-on-error: true
 
-      # ---------- Artifacts ----------
       - name: Upload benchmark artifacts
         uses: actions/upload-artifact@v5
         if: always()
