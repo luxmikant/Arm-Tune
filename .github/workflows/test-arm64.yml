@@ -11,41 +11,36 @@ jobs:
   test:
     runs-on: ubuntu-24.04-arm
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+      - name: Install system deps
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq numactl hwloc 2>/dev/null || true
+
+      - name: Install package
+        run: python -m pip install --upgrade pip && pip install -e ".[dev]"
 
       - name: Lint (ruff)
         run: ruff check armtune/ tests/
 
-      - name: Type check (mypy)
-        continue-on-error: true
-        run: mypy armtune/ --ignore-missing-imports
-
       - name: Run tests
         run: pytest tests/ -v
 
-      - name: Detect hardware
-        run: python -c "
-import platform
-import subprocess
-print(f'Architecture: {platform.machine()}')
-print(f'Python: {platform.python_version()}')
-result = subprocess.run(['lscpu'], capture_output=True, text=True)
-print(result.stdout[:2000])
-result2 = subprocess.run(['free', '-h'], capture_output=True, text=True)
-print(result2.stdout)
-        "
+      - name: Record hardware (ARM64)
+        run: |
+          echo "=== uname -a ==="
+          uname -a
+          echo "=== CPU ==="
+          lscpu 2>&1 || true
+          echo "=== Memory ==="
+          free -h
+          echo "=== Cores ==="
+          nproc
 
       - name: Smoke test CLI
         run: |
           armtune --version
-          armtune detect --json
+          mkdir -p results
+          armtune detect --json | tee results/hardware.json

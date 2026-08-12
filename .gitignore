@@ -22,6 +22,9 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
+# Nested repo (duplicate clone — do not track)
+Arm-Tune/
+
 # Project artifacts
 results/
 *.gguf
