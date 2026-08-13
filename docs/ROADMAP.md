@@ -1,59 +1,44 @@
 # ArmTune Serve — ROADMAP
 
-## Current status: M1-M4 complete
+## Current status (2026-08-13)
 
 | Milestone | Status | Evidence |
 |-----------|--------|----------|
-| M1 — Native ARM64 foundation | Done | Package installs, `detect` CLI works, ARM64 CI workflow |
-| M2 — Baseline benchmark | Done | Benchmark orchestrator with mock adapter, metrics collection |
-| M3 — Optimization sweeps | Done | Thread sweep, concurrency sweep, quantization comparison via profiles |
-| M4 — Recommendation & reporting | Done | Recommendation engine (4 objectives), report generator (JSON/CSV/MD/charts) |
+| M1 — Native ARM64 foundation | Done | CI on `ubuntu-24.04-arm` (Neoverse-N2), `armtune detect` works |
+| M2 — Baseline benchmark | Done | Real llama.cpp inference via LlamaServerAdapter, TTFT/tok-s/P50-P99/RSS |
+| M3 — Optimization sweeps | Done | Threads, concurrency, quantization (HF), KleidiAI vs generic builds |
+| M4 — Recommendation & reporting | Done | 4 objectives, quality gate, JSON/CSV/MD + 4 chart sets, launch command |
+| M5 — Dashboard | Done | Gradio 5-tab app incl. one-click HF pull + benchmark |
+| M6 — Arm server validation | Next | Persistent Arm server: NUMA/affinity, larger models, vLLM adapter, pin apx flags |
+| M7 — CPU-GPU extension | Future | GPU detection, utilization, pipeline balance |
 
-## What's broken / needs fixing
+## Implemented feature set
 
-1. **Benchmark workflow exit code 1** — partly caused by duplicate `Arm-Tune/` nested repo.
-   Fixed: removed from tracking, actions updated to v5/v6, workflow made resilient with `continue-on-error`.
-2. **No artifacts produced** — results directory wasn't created before benchmark runs.
-   Fixed: `mkdir -p results` added as first step.
-3. **File duplication** — `Arm-Tune/` was a nested repo clone.
-   Fixed: added to `.gitignore`, will be deleted manually.
-4. **Git exit 128** — caused by nested `.git` directory.
-   Fixed: excluded from tracking.
+- Hardware capability fingerprint (NEON/DotProd/I8MM/SVE2/BF16, cores, NUMA)
+- Arm Performix integration (installer, concurrent capture, status-transparent probing)
+- llama-server subprocess adapter with startup `system_info`/`CPU_KLEIDIAI` evidence
+- Runtime auto-selection: llama-server → llama_cpp → mock
+- Hugging Face connector (`models list/pull`, `--repo/--quant` benchmarking)
+- Quality scorer with expected-label correctness bonus
+- Recommendation engine with quality threshold
+- Report generator: JSON, CSV, Markdown, charts.png, sweeps.png, performix.png, improvements.png
+- Deployment command export from recommendations
+- Gradio dashboard: Hardware / Sweeps / Performix / Recommendation / Hugging Face
+- GitHub Actions: test-arm64.yml (always), benchmark-arm64.yml (dispatch/schedule)
+- 25 offline unit tests, ruff clean
 
-## Immediate next steps
+## Immediate next steps (hackathon deadline Aug 14, 4 PM PDT)
 
-1. **Run on real ARM64 runner** — push to GitHub, watch `test-arm64.yml` run
-2. **Test with small model** — use Qwen2.5-0.5B or TinyLlama to fit runner RAM
-3. **Validate Performix** — once on ARM64, verify the CLI downloads and profiles correctly
-4. **Polish reports** — ensure charts render, CSV is clean
-
-## Remaining milestones
-
-### M5 — Dashboard (medium priority)
-
-Streamlit dashboard showing:
-- Hardware profile
-- Live CPU/memory metrics
-- Config comparison table
-- Recommended configuration card
-
-### M6 — Arm server validation (high priority)
-
-- Request access from Works on Arm / Open Source Lab
-- Test on persistent Graviton/Cobalt/Axion server
-- Run larger models (7B, 13B)
-- Validate NUMA and memory bandwidth analysis
-
-### M7 — CPU-GPU extension (future)
-
-- GPU detection (PCIe, Vulkan, CUDA MIG)
-- GPU utilization and memory tracking
-- CPU-GPU pipeline balance measurement
-- Heterogeneous deployment recommendations
+1. Trigger `Benchmark ARM64`; verify KleidiAI build and `apx` probe on runner
+2. Save best artifact run to `docs/evidence/` and commit
+3. Record <3 min demo video
+4. Devpost submission: Overview / Functionality / Setup / repo / video
+5. Set license visible in GitHub About section
 
 ## Known limitations
 
-- Mock adapter used for local testing (no real model on CI yet)
-- Performix requires ARM64 hardware — tested on CI but not yet on persistent server
-- GitHub Actions runner has limited CPU/RAM — large models may not fit
-- Charts require matplotlib (optional dependency)
+- Mock adapter is a fallback on machines without a model or llama-server
+- Performix CLI flags are probed (candidate commands) until `apx --help` is captured
+- CI runner is 4-core/15 GB — larger-model claims need M6 hardware
+- vLLM adapter deferred (build requirements exceed runner capacity)
+- Windows is development-only; benchmarking targets ARM64 Linux
