@@ -25,6 +25,9 @@ Thumbs.db
 # Nested repo (duplicate clone — do not track)
 Arm-Tune/
 
+# Hugging Face working clones
+ARM-TUNE-CPU-INFERENCE-OPT/
+
 # Project artifacts
 results/
 *.gguf
