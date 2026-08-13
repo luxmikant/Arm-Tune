@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -7,14 +7,14 @@ name = "armtune-serve"
 version = "0.1.0"
 description = "Arm64-aware LLM inference optimization toolkit powered by Arm Performix."
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.10"
 authors = [{ name = "ArmTune Serve contributors" }]
 keywords = ["arm64", "llm", "inference", "benchmarking", "llama-cpp", "arm-performix", "optimization"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3 :: Only",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -36,6 +36,7 @@ dependencies = [
 Homepage = "https://github.com/luxmikant/Arm-Tune"
 Repository = "https://github.com/luxmikant/Arm-Tune"
 Issues = "https://github.com/luxmikant/Arm-Tune/issues"
+Documentation = "https://luxmikant.github.io/Arm-Tune/docs.html"
 
 [project.optional-dependencies]
 dev = [
@@ -46,6 +47,10 @@ dev = [
 ]
 dashboard = [
     "gradio>=4.0",
+]
+release = [
+    "build>=1.2",
+    "twine>=5.0",
 ]
 
 [project.scripts]

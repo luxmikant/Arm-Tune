@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ArmTune Serve measures and recommends efficient LLM inference configurations for Arm64 cloud CPUs.">
+  <meta name="theme-color" content="#090b0d">
+  <title>ArmTune Serve | Tune every token</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="noise" aria-hidden="true"></div>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="ArmTune Serve home">
+      <span class="brand-mark">AT</span>
+      <span>ArmTune <em>Serve</em></span>
+    </a>
+    <button class="menu-button" type="button" aria-expanded="false" aria-controls="main-nav">Menu</button>
+    <nav id="main-nav" class="main-nav">
+      <a href="#problem">Why it matters</a>
+      <a href="#how">How it works</a>
+      <a href="#evidence">Evidence</a>
+      <a href="docs.html">Docs</a>
+      <a class="nav-github" href="https://github.com/luxmikant/Arm-Tune" target="_blank" rel="noreferrer">GitHub <span>↗</span></a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero shell">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="pulse-dot"></span> Arm64 / CPU-first / Performix-powered</p>
+        <h1>Tune every token to the architecture it runs on.</h1>
+        <p class="hero-lede">ArmTune Serve turns an Arm cloud server's hardware fingerprint into a measured LLM deployment configuration. Less guesswork. More useful CPU time.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="docs.html#quick-start">Start tuning <span>→</span></a>
+          <a class="button button-quiet" href="https://github.com/luxmikant/Arm-Tune" target="_blank" rel="noreferrer">View source <span>↗</span></a>
+        </div>
+        <div class="hero-note"><span class="mini-rule"></span> Built for Graviton, Cobalt, Axion, Ampere and native Arm64 CI.</div>
+      </div>
+      <div class="hero-console" aria-label="Example ArmTune terminal output">
+        <div class="console-top"><span class="console-light red"></span><span class="console-light amber"></span><span class="console-light green"></span><span class="console-title">armtune / benchmark</span><span class="console-live">LIVE</span></div>
+        <div class="console-body">
+          <p><span class="prompt">$</span> armtune detect</p>
+          <p class="muted">architecture</p><p class="value">aarch64 / Neoverse-N2</p>
+          <p class="muted">features</p><p class="value">NEON  I8MM  SVE2  BF16</p>
+          <p><span class="prompt">$</span> armtune recommend --latest</p>
+          <div class="recommend-line"><span>recommended</span><strong>Q4_K_M / 4 threads / 1 slot</strong></div>
+          <div class="console-metrics"><div><small>TTFT</small><b>0.31s</b><i>-28%</i></div><div><small>DECODE</small><b>18.4</b><em>tok/s</em></div><div><small>QUALITY</small><b>0.91</b><i>pass</i></div></div>
+          <p class="cursor"><span class="prompt">$</span> <span class="typing">llama-server -m model.gguf -t 4 -np 1</span><span class="caret"></span></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="proof-strip shell" aria-label="Project facts">
+      <div><strong>01</strong><span>Detect</span><small>ISA, cores, memory, NUMA</small></div>
+      <div><strong>02</strong><span>Measure</span><small>real inference on real hardware</small></div>
+      <div><strong>03</strong><span>Explain</span><small>Arm Performix counters</small></div>
+      <div><strong>04</strong><span>Deploy</span><small>copy-paste launch command</small></div>
+    </section>
+
+    <section id="problem" class="section shell">
+      <div class="section-label"><span>01</span><span>Why this matters</span></div>
+      <div class="split-heading"><h2>The same model does not have one best configuration.</h2><p>Quantization, thread count, memory pressure and concurrency interact with the processor underneath. A setting that wins on a 4-core Neoverse-N2 can lose on a larger Graviton machine.</p></div>
+      <div class="card-grid three">
+        <article class="feature-card accent-green"><span class="card-index">A / MODEL</span><h3>Quality is a constraint.</h3><p>Compare Q4, Q8 and other GGUF variants without allowing a fast but invalid structured response to win.</p><a href="docs.html#quality">Quality gate <span>→</span></a></article>
+        <article class="feature-card accent-blue"><span class="card-index">B / RUNTIME</span><h3>Threads are not free.</h3><p>Separate decode and prefill behavior. Find where extra cores stop helping and start competing for bandwidth.</p><a href="docs.html#cpu">CPU tuning <span>→</span></a></article>
+        <article class="feature-card accent-orange"><span class="card-index">C / EVIDENCE</span><h3>Numbers need a reason.</h3><p>Arm Performix adds IPC, cache, branch and memory evidence to explain why a configuration wins.</p><a href="docs.html#performix">Performix <span>→</span></a></article>
+      </div>
+    </section>
+
+    <section id="how" class="section section-dark">
+      <div class="shell">
+        <div class="section-label"><span>02</span><span>How it works</span></div>
+        <div class="split-heading"><h2>One workflow from model to production command.</h2><p>ArmTune sits around the runtime you already trust. It does not replace llama.cpp. It makes the deployment decision observable and repeatable.</p></div>
+        <div class="pipeline">
+          <div class="pipeline-step"><span class="step-num">01</span><div class="step-icon">⌁</div><h3>Fingerprint</h3><p>Read the CPU's instruction set, memory, cores and NUMA topology.</p></div>
+          <div class="pipeline-connector"></div>
+          <div class="pipeline-step"><span class="step-num">02</span><div class="step-icon">↓</div><h3>Source</h3><p>Pull a GGUF model and quantization directly from Hugging Face.</p></div>
+          <div class="pipeline-connector"></div>
+          <div class="pipeline-step"><span class="step-num">03</span><div class="step-icon">×</div><h3>Sweep</h3><p>Run controlled tests across quantization, threads and concurrency.</p></div>
+          <div class="pipeline-connector"></div>
+          <div class="pipeline-step"><span class="step-num">04</span><div class="step-icon">◎</div><h3>Recommend</h3><p>Rank the quality-safe configurations and export the command.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="evidence" class="section shell">
+      <div class="section-label"><span>03</span><span>Evidence, not folklore</span></div>
+      <div class="evidence-heading"><h2>Make the bottleneck visible.</h2><div class="counter-note"><span class="counter-led"></span><span>Arm Performix counters</span><small>captured with the workload</small></div></div>
+      <div class="evidence-panel">
+        <div class="panel-head"><span>configuration comparison</span><span>Neoverse-N2 / aarch64</span></div>
+        <div class="metric-row"><div class="metric-label"><span>Q8_0 / generic</span><small>baseline</small></div><div class="bar-track"><span class="bar bar-gray" style="width: 52%"></span></div><strong>11.8 <small>tok/s</small></strong></div>
+        <div class="metric-row selected"><div class="metric-label"><span>Q4_K_M / KleidiAI</span><small>recommended</small></div><div class="bar-track"><span class="bar bar-green" style="width: 91%"></span></div><strong>18.4 <small>tok/s</small></strong></div>
+        <div class="metric-row"><div class="metric-label"><span>Q4_0 / KleidiAI</span><small>quality-safe</small></div><div class="bar-track"><span class="bar bar-blue" style="width: 84%"></span></div><strong>17.1 <small>tok/s</small></strong></div>
+        <div class="evidence-footer"><span>Throughput</span><span>Quality threshold: <b>0.50</b></span><span>Recommendation: <b>Q4_K_M</b></span></div>
+      </div>
+      <p class="disclaimer">Illustrative dashboard view. Published benchmark values are generated from the Arm64 workflow and stored as JSON, CSV, Markdown and chart artifacts.</p>
+    </section>
+
+    <section class="section section-dark" id="use-cases">
+      <div class="shell">
+        <div class="section-label"><span>04</span><span>Built for real workflows</span></div>
+        <div class="split-heading"><h2>Useful before the first request reaches production.</h2><p>ArmTune turns a performance question into an artifact a team can review, automate and deploy.</p></div>
+        <div class="use-case-list">
+          <article class="use-case"><div class="use-case-mark">01</div><div><h3>ML engineer</h3><p>Compare model size, quality and speed on the actual Arm target before selecting a quantization.</p></div><span>→</span></article>
+          <article class="use-case"><div class="use-case-mark">02</div><div><h3>Platform team</h3><p>Run the benchmark in CI and detect a performance regression when a runtime or model changes.</p></div><span>→</span></article>
+          <article class="use-case"><div class="use-case-mark">03</div><div><h3>Cloud architect</h3><p>Compare a CPU-only deployment profile with a future CPU-GPU split using the same workload contract.</p></div><span>→</span></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section shell platform-section">
+      <div class="section-label"><span>05</span><span>Arm cloud, without hardcoding a vendor</span></div>
+      <div class="platform-intro"><h2>Detect the capability. Tune the machine.</h2><p>ArmTune works from the CPU fingerprint, so the same workflow travels across Arm64 Linux environments.</p></div>
+      <div class="platform-grid"><span>AWS Graviton</span><span>Azure Cobalt</span><span>Google Axion</span><span>Ampere</span><span>Neoverse N1</span><span>Neoverse N2</span><span>Neoverse V2</span><span>Arm64 CI</span></div>
+    </section>
+
+    <section class="cta-band">
+      <div class="shell cta-inner"><div><p class="eyebrow">OPEN SOURCE / ARM64</p><h2>Stop guessing at runtime flags.</h2></div><div class="cta-actions"><a class="button button-primary" href="docs.html#quick-start">Read the docs <span>→</span></a><a class="button button-outline" href="https://github.com/luxmikant/Arm-Tune" target="_blank" rel="noreferrer">Star on GitHub <span>↗</span></a></div></div>
+    </section>
+  </main>
+
+  <footer class="site-footer shell"><div class="footer-brand"><span class="brand-mark">AT</span><span>ArmTune Serve</span></div><p>Arm64 LLM inference optimization, made observable.</p><div class="footer-links"><a href="docs.html">Documentation</a><a href="https://github.com/luxmikant/Arm-Tune" target="_blank" rel="noreferrer">GitHub</a><a href="https://huggingface.co/lshar/ARM-TUNE-CPU-INFERENCE-OPT" target="_blank" rel="noreferrer">Hugging Face</a><span>MIT License</span></div><small>© <span data-year></span> ArmTune Serve contributors</small></footer>
+  <script src="site.js"></script>
+</body>
+</html>

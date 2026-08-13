@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ArmTune Serve documentation: install, benchmark, understand the recommendation, and publish evidence.">
+  <meta name="theme-color" content="#090b0d">
+  <title>Docs | ArmTune Serve</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="docs-page">
+  <div class="noise" aria-hidden="true"></div>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="ArmTune Serve home"><span class="brand-mark">AT</span><span>ArmTune <em>Serve</em></span></a>
+    <button class="menu-button" type="button" aria-expanded="false" aria-controls="main-nav">Menu</button>
+    <nav id="main-nav" class="main-nav"><a href="index.html#problem">Why it matters</a><a href="index.html#how">How it works</a><a href="index.html#evidence">Evidence</a><a class="active" href="docs.html">Docs</a><a class="nav-github" href="https://github.com/luxmikant/Arm-Tune" target="_blank" rel="noreferrer">GitHub <span>↗</span></a></nav>
+  </header>
+
+  <main class="docs-layout shell">
+    <aside class="docs-sidebar">
+      <p class="eyebrow">Documentation</p>
+      <h1>Run the loop.</h1>
+      <p>From an empty Arm64 machine to a measured deployment command.</p>
+      <nav class="docs-nav"><a href="#quick-start">Quick start</a><a href="#benchmark">Benchmark</a><a href="#cpu">CPU tuning</a><a href="#performix">Performix</a><a href="#results">Results</a><a href="#release">Release</a></nav>
+      <a class="side-source" href="https://github.com/luxmikant/Arm-Tune/blob/main/docs/USAGE.md" target="_blank" rel="noreferrer">Read source docs <span>↗</span></a>
+    </aside>
+    <article class="docs-content">
+      <div class="docs-hero"><p class="eyebrow"><span class="pulse-dot"></span> ArmTune Serve / v0.1</p><h2>A measured answer to a hardware-specific question.</h2><p>Use these commands on native Arm64 Linux. Windows and x86 machines can run tests and the dashboard, but real inference evidence must come from the Arm target.</p></div>
+
+      <section id="quick-start" class="doc-section"><span class="doc-kicker">01 / QUICK START</span><h2>Install and detect.</h2><p>Start with the Python control plane, then install the platform-specific runtime and profiler.</p><pre><code>git clone https://github.com/luxmikant/Arm-Tune.git
+
+      <section id="benchmark" class="doc-section"><span class="doc-kicker">02 / BENCHMARK</span><h2>Pull a model, sweep the real choices.</h2><p>The model connector lists GGUF variants and caches selected files locally. The benchmark keeps prompts, warmup, seed and output limits constant.</p><pre><code>armtune models list unsloth/Llama-3.2-1B-Instruct-GGUF
+
+      <section id="cpu" class="doc-section"><span class="doc-kicker">03 / CPU TUNING</span><h2>Why Arm-specific settings matter.</h2><p>Prefill and decode are different workloads. Prefill is matrix-heavy and responds to batch settings; decode repeatedly touches weights and KV state and is sensitive to memory bandwidth, cache behavior and thread oversubscription.</p><div class="doc-table"><div class="table-row table-head"><span>Setting</span><span>What it changes</span><span>What to measure</span></div><div class="table-row"><span><code>-t</code> threads</span><span>decode parallelism</span><span>decode tok/s, P95</span></div><div class="table-row"><span><code>-tb</code> batch threads</span><span>prefill parallelism</span><span>prompt tok/s, TTFT</span></div><div class="table-row"><span>quantization</span><span>weight size and kernel path</span><span>RSS, quality, tok/s</span></div><div class="table-row"><span>concurrency</span><span>server slots and queueing</span><span>aggregate tok/s, P95</span></div><div class="table-row"><span>context / KV cache</span><span>memory per request</span><span>RSS, feasibility</span></div></div><p class="doc-linkline">ArmTune builds a generic baseline and a KleidiAI/native Arm variant. The point is not to claim that every lower-bit model wins. The point is to measure which one wins here.</p></section>
+
+      <section id="performix" class="doc-section"><span class="doc-kicker">04 / ARM PERFORMIX</span><h2>Explain the win.</h2><p>Arm Performix profiles the inference process while the workload is running. The report can connect application metrics to hardware signals.</p><div class="counter-grid"><div><strong>IPC</strong><span>instructions per cycle</span></div><div><strong>LLC</strong><span>last-level cache misses</span></div><div><strong>BR</strong><span>branch misprediction</span></div><div><strong>BW</strong><span>memory read/write</span></div></div><p>If a profiler command differs between Performix releases, ArmTune records the attempted command, version, stderr and status instead of presenting empty counters as success.</p></section>
+
+      <section id="results" class="doc-section"><span class="doc-kicker">05 / RESULTS</span><h2>Read the recommendation.</h2><p>Each run creates a timestamped directory under <code>results/</code>.</p><pre><code>results/20260813_134346/
+
+      <section id="release" class="doc-section"><span class="doc-kicker">06 / RELEASE</span><h2>Use it as a package or a workflow.</h2><p>The Python control plane is packaged as <code>armtune-serve</code>. A trusted-publishing workflow is included for PyPI. The runtime binary and model weights remain separate, platform-specific artifacts.</p><pre><code>python -m pip install armtune-serve
+
+      <div class="docs-footer"><a class="button button-primary" href="https://github.com/luxmikant/Arm-Tune" target="_blank" rel="noreferrer">Open repository <span>↗</span></a><a class="button button-quiet" href="index.html">Back to product <span>→</span></a></div>
+    </article>
+  </main>
+  <footer class="site-footer shell"><div class="footer-brand"><span class="brand-mark">AT</span><span>ArmTune Serve</span></div><p>Arm64 LLM inference optimization, made observable.</p><div class="footer-links"><a href="index.html">Product</a><a href="https://github.com/luxmikant/Arm-Tune" target="_blank" rel="noreferrer">GitHub</a><span>MIT License</span></div><small>© <span data-year></span> ArmTune Serve contributors</small></footer>
+  <script src="site.js"></script>
+</body>
+</html>
