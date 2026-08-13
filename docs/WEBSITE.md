@@ -17,11 +17,15 @@ Open `http://127.0.0.1:4173/`.
 The `deploy-pages.yml` workflow publishes `site/` whenever changes land on
 `main` under `site/`.
 
-The first deployment requires one repository setting:
+The first deployment requires one repository setting because the workflow
+token cannot enable Pages on its own (GitHub's configure-pages action only
+allows programmatic enablement with a personal access token):
 
 1. Open GitHub repository **Settings > Pages**.
 2. Set **Source** to **GitHub Actions**.
-3. Push a change to `site/` or run **Actions > Deploy product website > Run workflow**.
+3. Run **Actions > Deploy product website > Run workflow**.
+
+After step 2, every push to `site/` deploys automatically.
 
 Expected URL:
 
