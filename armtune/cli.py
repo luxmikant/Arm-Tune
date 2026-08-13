@@ -214,7 +214,7 @@ def benchmark(
 
         console.print(f"\n[bold cyan]Benchmarking {label}[/] "
                       f"(model={path or 'mock'}, quant={quant_tag}, "
-                      f"threads={p.runtime.threads})[/]")
+                      f"threads={p.runtime.threads})")
         result = orchestrator.run(p)
         results.append(result)
         all_runs.extend(result.sweep_results)

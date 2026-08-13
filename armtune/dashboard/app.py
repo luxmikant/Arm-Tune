@@ -195,15 +195,13 @@ def build_dashboard(results_dir: str = "results") -> gr.Blocks:
         gr.Markdown("# ArmTune Serve — Arm64 LLM inference optimizer")
 
         with gr.Tab("Hardware"):
-            hw_table = gr.Dataframe(value=_hardware_table(), interactive=False)
+            hw_table = gr.Dataframe(value=_hardware_table())
             gr.Button("Refresh").click(
                 lambda: _hardware_table(), outputs=hw_table
             )
 
         with gr.Tab("Sweeps"):
-            results_table = gr.Dataframe(
-                value=_results_table(results_dir), interactive=False
-            )
+            results_table = gr.Dataframe(value=_results_table(results_dir))
             gallery = gr.Gallery(
                 value=_chart_gallery(results_dir), label="Charts", columns=2
             )
@@ -216,18 +214,14 @@ def build_dashboard(results_dir: str = "results") -> gr.Blocks:
             )
 
         with gr.Tab("Performix"):
-            px_table = gr.Dataframe(
-                value=_performix_table(results_dir), interactive=False
-            )
+            px_table = gr.Dataframe(value=_performix_table(results_dir))
             gr.Button("Refresh").click(
                 lambda: _performix_table(results_dir), outputs=px_table
             )
 
         with gr.Tab("Recommendation"):
             rec_md = gr.Markdown()
-            launch_box = gr.Textbox(
-                label="Deployment command", interactive=False, show_copy_button=True
-            )
+            launch_box = gr.Textbox(label="Deployment command")
             gr.Button("Refresh").click(
                 lambda: _recommendation_view(results_dir),
                 outputs=[rec_md, launch_box],
@@ -254,7 +248,7 @@ def build_dashboard(results_dir: str = "results") -> gr.Blocks:
                 concurrency_input = gr.Textbox(
                     label="Concurrency sweep (csv)", placeholder="1,2,4"
                 )
-            log_box = gr.Textbox(label="Benchmark log", lines=15, interactive=False)
+            log_box = gr.Textbox(label="Benchmark log", lines=15)
             run_btn = gr.Button("Pull model + run benchmark", variant="primary")
             repo_input.change(_list_quants, inputs=repo_input, outputs=quant_dropdown)
             run_btn.click(
