@@ -16,9 +16,9 @@ runtime:
   enable_mmap: true
   enable_mlock: false
 benchmark:
-  warmup_requests: 2
-  measurement_requests: 10
-  max_tokens: 256
+  warmup_requests: 1
+  measurement_requests: 6
+  max_tokens: 128
   temperature: 0.0
   seed: 42
   prompt_set: support_tickets

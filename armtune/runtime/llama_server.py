@@ -160,10 +160,126 @@ class LlamaServerAdapter(RuntimeAdapter):
                     if len(key) < 60:
                         self.evidence[key] = stripped
 
+    @staticmethod
+    def build_messages(prompt: str) -> list[dict]:
+        """Convert a workload prompt into chat messages.
+
+        Workload prompts are JSON objects with system/instruction/ticket
+        fields. Instruct models answer far better through the chat template
+        (applied server-side by /v1/chat/completions) than as raw completion
+        text, which is what makes the quality scores meaningful.
+        """
+        try:
+            data = json.loads(prompt)
+        except json.JSONDecodeError:
+            data = None
+        if isinstance(data, dict) and ("instruction" in data or "ticket" in data):
+            system = data.get("system") or (
+                "You are a support-ticket classifier. "
+                "Respond with ONLY valid JSON."
+            )
+            user = (
+                f"{data.get('instruction', '')}\n\n"
+                f"Ticket: {data.get('ticket', '')}\n\n"
+                "Return ONLY JSON with keys: summary, category, priority, "
+                "recommended_action. category must be one of: billing, "
+                "technical, account, general, security, performance, "
+                "feature_request, other. priority must be one of: low, "
+                "medium, high, critical."
+            )
+            return [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ]
+        return [{"role": "user", "content": prompt}]
+
     def generate(self, request: GenerationRequest) -> GenerationResponse:
         if self._proc is None:
             raise RuntimeError("Model not initialized. Call initialize() first.")
 
+        try:
+            return self._generate_chat(request)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return self._generate_completion(request)
+            raise
+
+    def _generate_chat(self, request: GenerationRequest) -> GenerationResponse:
+        payload = {
+            "messages": self.build_messages(request.prompt),
+            "max_tokens": request.max_tokens,
+            "temperature": request.temperature,
+            "seed": request.seed,
+            "stream": True,
+            "stream_options": {"include_usage": True},
+        }
+
+        start = time.perf_counter()
+        first_token_time: float | None = None
+        text_parts: list[str] = []
+        chunks = 0
+        usage: dict = {}
+        timings: dict = {}
+
+        with httpx.stream(
+            "POST",
+            f"http://127.0.0.1:{self._port}/v1/chat/completions",
+            json=payload,
+            timeout=600.0,
+        ) as r:
+            r.raise_for_status()
+            for line in r.iter_lines():
+                if not line or not line.startswith("data:"):
+                    continue
+                data_str = line[len("data:"):].strip()
+                if data_str == "[DONE]":
+                    break
+                try:
+                    data = json.loads(data_str)
+                except json.JSONDecodeError:
+                    continue
+                choices = data.get("choices") or []
+                delta = ""
+                if choices:
+                    delta = (choices[0].get("delta") or {}).get("content") or ""
+                if delta:
+                    if first_token_time is None:
+                        first_token_time = time.perf_counter()
+                    text_parts.append(delta)
+                    chunks += 1
+                if isinstance(data.get("usage"), dict):
+                    usage = data["usage"]
+                if isinstance(data.get("timings"), dict):
+                    timings = data["timings"]
+
+        end = time.perf_counter()
+        ttft = (first_token_time - start) if first_token_time else 0.0
+        total = end - start
+
+        prompt_tokens = int(usage.get("prompt_tokens", 0) or timings.get("prompt_n", 0))
+        completion_tokens = int(
+            usage.get("completion_tokens", 0)
+            or timings.get("predicted_n", 0)
+            or chunks
+        )
+        prompt_tps = float(timings.get("prompt_per_second", 0.0))
+        decode_tps = float(timings.get("predicted_per_second", 0.0))
+        if decode_tps <= 0 and total > 0 and completion_tokens > 0:
+            decode_tps = (completion_tokens - 1) / max(total - ttft, 1e-6)
+
+        return GenerationResponse(
+            text="".join(text_parts),
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens,
+            ttft_seconds=ttft,
+            total_seconds=total,
+            tokens_per_second=decode_tps,
+            prompt_tokens_per_second=prompt_tps,
+        )
+
+    def _generate_completion(self, request: GenerationRequest) -> GenerationResponse:
+        """Legacy /completion fallback for servers without the OpenAI API."""
         payload = {
             "prompt": request.prompt,
             "n_predict": request.max_tokens,
