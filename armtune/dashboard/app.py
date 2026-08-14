@@ -1,4 +1,9 @@
-"""Gradio dashboard: Hardware | Sweeps | Performix | Recommendation | Hugging Face."""
+"""Gradio dashboard: Console | Hardware | Sweeps | Performix | Recommendation.
+
+The Console tab is a guided, terminal-style pipeline: search Hugging Face,
+inspect the model card, pick quantizations, and run the benchmark with a
+live streaming log — no copy-pasting repo names between HF and the CLI.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +16,12 @@ import gradio as gr
 import pandas as pd
 
 from ..detect.detector import detect_hardware
-from ..models.hub import list_gguf_models
+from ..models.hub import (
+    get_model_card,
+    human_size,
+    list_gguf_models,
+    search_models,
+)
 
 
 def _latest_run_dir(results_dir: str | Path) -> Path | None:
@@ -60,7 +70,7 @@ def _results_table(results_dir: str) -> pd.DataFrame:
     data = _load_results(results_dir)
     results = data.get("results", [])
     if not results:
-        return pd.DataFrame({"info": ["No benchmark results yet. Run: armtune benchmark"]})
+        return pd.DataFrame({"info": ["No benchmark results yet. Run the console or: armtune benchmark"]})
 
     rows = []
     for r in results:
@@ -112,7 +122,7 @@ def _recommendation_view(results_dir: str) -> tuple[str, str]:
     data = _load_results(results_dir)
     rec = data.get("recommendation")
     if not rec:
-        return "No recommendation yet. Run: armtune benchmark", ""
+        return "No recommendation yet. Run the console or: armtune benchmark", ""
 
     lines = [
         f"**Objective:** {rec.get('objective', '')}",
@@ -128,57 +138,7 @@ def _recommendation_view(results_dir: str) -> tuple[str, str]:
     return "\n".join(lines), launch
 
 
-def _list_quants(repo_id: str) -> gr.Dropdown:
-    if not repo_id.strip():
-        return gr.Dropdown(choices=[], value=None)
-    try:
-        items = list_gguf_models(repo_id.strip())
-    except Exception as e:
-        return gr.Dropdown(choices=[], value=None, label=f"Error: {e}")
-    quants = [i["quantization"] for i in items]
-    return gr.Dropdown(choices=quants, value=quants[0] if quants else None)
-
-
-def _pull_and_benchmark(
-    repo_id: str,
-    quant: str,
-    profile: str,
-    threads: str,
-    concurrency: str,
-) -> str:
-    if not repo_id.strip():
-        return "Enter a Hugging Face repo first."
-    cmd = [sys.executable, "-m", "armtune.cli", "benchmark",
-           "--repo", repo_id.strip(), "--profile", profile or "balanced"]
-    if quant:
-        cmd += ["--quant", quant]
-    if threads.strip():
-        cmd += ["--threads", threads.strip()]
-    if concurrency.strip():
-        cmd += ["--concurrency", concurrency.strip()]
-
-    log = [f"$ {' '.join(cmd)}", ""]
-    try:
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-        )
-        assert proc.stdout is not None
-        for line in proc.stdout:
-            log.append(line.rstrip())
-            if len(log) > 200:
-                log = log[-200:]
-        proc.wait()
-        log.append(f"\nExit code: {proc.returncode}")
-        log.append("Done. Refresh the Sweeps/Recommendation tabs.")
-    except Exception as e:
-        log.append(f"Failed: {e}")
-    return "\n".join(log)
-
-
-def _chart_gallery(results_dir: str):
+def _chart_gallery(results_dir: str) -> list[tuple[str, str]] | None:
     run_dir = _latest_run_dir(results_dir)
     if run_dir is None:
         return None
@@ -190,15 +150,220 @@ def _chart_gallery(results_dir: str):
     return images if images else None
 
 
+# ---------------------------------------------------------------------------
+# Console: Hugging Face model search + guided benchmark
+# ---------------------------------------------------------------------------
+
+def _search_repos(query: str, limit: int = 8) -> tuple[gr.Dropdown, str]:
+    if not query.strip():
+        return gr.Dropdown(choices=[], value=None), "Type a model name to search Hugging Face."
+    try:
+        results = search_models(query.strip(), limit=limit)
+    except Exception as e:
+        return gr.Dropdown(choices=[], value=None), f"Search failed: {e}"
+    if not results:
+        return gr.Dropdown(choices=[], value=None), f"No models found for '{query}'."
+    choices = [
+        f"{r['repo_id']}  ({r['downloads']:,} downloads)" for r in results
+    ]
+    return gr.Dropdown(choices=choices, value=choices[0]), ""
+
+
+def _repo_details(selection: str) -> tuple[gr.Dropdown, gr.CheckboxGroup, str]:
+    if not selection:
+        return (
+            gr.Dropdown(choices=[], value=None),
+            gr.CheckboxGroup(choices=[], value=[]),
+            "Pick a model to inspect its card and quantizations.",
+        )
+    repo_id = selection.split("  (")[0]
+    try:
+        card = get_model_card(repo_id)
+        items = list_gguf_models(repo_id)
+    except Exception as e:
+        return (
+            gr.Dropdown(choices=[], value=None),
+            gr.CheckboxGroup(choices=[], value=[]),
+            f"Could not load {repo_id}: {e}",
+        )
+
+    quant_options = [
+        f"{i['quantization']}  ({human_size(i['size_bytes'])})" for i in items
+    ]
+    default_quants = ["Q4_K_M", "Q4_0", "Q8_0"]
+    defaults = [
+        option for option in quant_options
+        if option.split("  (")[0] in default_quants
+    ]
+
+    lines = [
+        f"### {repo_id}",
+        "",
+        f"- Downloads: **{card['downloads']:,}**"
+        if card["downloads"] is not None else "- Downloads: unknown",
+        f"- Likes: {card['likes']:,}"
+        if card["likes"] is not None else "- Likes: unknown",
+        f"- License: `{card['license']}`" if card["license"] else "- License: check upstream repo",
+        f"- Pipeline: {card['pipeline_tag']}" if card["pipeline_tag"] else "",
+        f"- Tags: {' '.join('`' + t + '`' for t in card['tags'][:10])}"
+        if card["tags"] else "",
+    ]
+    card_md = "\n".join(lines)
+    return (
+        gr.Dropdown(choices=quant_options, value=quant_options[0] if quant_options else None),
+        gr.CheckboxGroup(choices=quant_options, value=defaults),
+        card_md,
+    )
+
+
+def _run_console(
+    repo_selection: str,
+    quant_selection: list[str],
+    profile: str,
+    threads: str,
+    concurrency: str,
+):
+    if not repo_selection:
+        yield "Select a model from search results first."
+        return
+    repo_id = repo_selection.split("  (")[0]
+    quants = [q.split("  (")[0] for q in quant_selection]
+
+    cmd = [
+        sys.executable, "-m", "armtune.cli", "benchmark",
+        "--repo", repo_id,
+        "--profile", profile.strip() or "balanced",
+        "--output", "results",
+    ]
+    if quants:
+        cmd += ["--quant", ",".join(quants)]
+    if threads.strip():
+        cmd += ["--threads", threads.strip()]
+    if concurrency.strip():
+        cmd += ["--concurrency", concurrency.strip()]
+
+    log: list[str] = [f"$ {' '.join(cmd)}", ""]
+    yield "\n".join(log)
+
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            log.append(line.rstrip())
+            log = log[-150:]
+            yield "\n".join(log)
+        proc.wait()
+        log.append("")
+        log.append(f"[exit {proc.returncode}]"
+                   f"{'  — refresh Sweeps / Recommendation tabs.' if proc.returncode == 0 else ''}")
+        yield "\n".join(log)
+    except Exception as e:
+        log.append(f"Failed: {e}")
+        yield "\n".join(log)
+
+
 def build_dashboard(results_dir: str = "results") -> gr.Blocks:
+    dark = gr.themes.Base(
+        primary_hue="green",
+        neutral_hue="slate",
+    ).set(
+        body_background_fill="#090b0d",
+        body_background_fill_dark="#090b0d",
+        background_fill_primary="#101316",
+        background_fill_secondary="#15191d",
+        border_color_primary="#28312f",
+        block_title_text_color="#b8f36b",
+        body_text_color="#f1f5f2",
+        body_text_color_subdued="#9aa5a1",
+    )
+
     with gr.Blocks(title="ArmTune Serve") as demo:
-        gr.Markdown("# ArmTune Serve — Arm64 LLM inference optimizer")
+        gr.Markdown(
+            "# ArmTune Serve\n"
+            "**Tune every token to the architecture it runs on.** "
+            "Arm64 LLM inference optimization console."
+        )
+
+        with gr.Tab("Console"):
+            gr.Markdown(
+                "Guided pipeline: search Hugging Face, inspect the model card, "
+                "pick quantizations, and run the benchmark — the terminal does "
+                "the work, the log streams here."
+            )
+            with gr.Row():
+                search_input = gr.Textbox(
+                    label="1 · Search Hugging Face",
+                    placeholder="e.g. llama 3.2 1b gguf, qwen 0.5b, ...",
+                    scale=3,
+                )
+                search_button = gr.Button("Search", scale=1, variant="primary")
+            repo_dropdown = gr.Dropdown(
+                label="2 · Matching models", choices=[], interactive=True
+            )
+            search_status = gr.Markdown("")
+            search_button.click(
+                _search_repos,
+                inputs=search_input,
+                outputs=[repo_dropdown, search_status],
+            )
+            search_input.submit(
+                _search_repos,
+                inputs=search_input,
+                outputs=[repo_dropdown, search_status],
+            )
+
+            gr.Markdown("---")
+            card_md = gr.Markdown("Pick a model to inspect its card and quantizations.")
+            quant_dropdown = gr.Dropdown(
+                label="Primary quantization", choices=[], interactive=True
+            )
+            quant_group = gr.CheckboxGroup(
+                label="3 · Quantizations to benchmark", choices=[], value=[]
+            )
+            repo_dropdown.change(
+                _repo_details,
+                inputs=repo_dropdown,
+                outputs=[quant_dropdown, quant_group, card_md],
+            )
+
+            gr.Markdown("---")
+            with gr.Row():
+                profile_input = gr.Textbox(label="4 · Profile", value="balanced")
+                threads_input = gr.Textbox(
+                    label="Thread sweep (csv)", placeholder="1,2,4"
+                )
+                concurrency_input = gr.Textbox(
+                    label="Concurrency sweep (csv)", placeholder="1,2"
+                )
+            run_button = gr.Button(
+                "5 · Run benchmark", variant="primary", size="lg"
+            )
+            console_log = gr.Textbox(
+                label="Terminal",
+                lines=18,
+                max_lines=18,
+                value="$ waiting for input…",
+            )
+            run_button.click(
+                _run_console,
+                inputs=[
+                    repo_dropdown,
+                    quant_group,
+                    profile_input,
+                    threads_input,
+                    concurrency_input,
+                ],
+                outputs=console_log,
+            )
 
         with gr.Tab("Hardware"):
             hw_table = gr.Dataframe(value=_hardware_table())
-            gr.Button("Refresh").click(
-                lambda: _hardware_table(), outputs=hw_table
-            )
+            gr.Button("Refresh").click(lambda: _hardware_table(), outputs=hw_table)
 
         with gr.Tab("Sweeps"):
             results_table = gr.Dataframe(value=_results_table(results_dir))
@@ -206,10 +371,7 @@ def build_dashboard(results_dir: str = "results") -> gr.Blocks:
                 value=_chart_gallery(results_dir), label="Charts", columns=2
             )
             gr.Button("Refresh").click(
-                lambda: (
-                    _results_table(results_dir),
-                    _chart_gallery(results_dir),
-                ),
+                lambda: (_results_table(results_dir), _chart_gallery(results_dir)),
                 outputs=[results_table, gallery],
             )
 
@@ -227,36 +389,7 @@ def build_dashboard(results_dir: str = "results") -> gr.Blocks:
                 outputs=[rec_md, launch_box],
             )
 
-        with gr.Tab("Hugging Face"):
-            gr.Markdown(
-                "Pick a GGUF model from Hugging Face and benchmark it on this "
-                "Arm machine in one click."
-            )
-            with gr.Row():
-                repo_input = gr.Textbox(
-                    label="Hugging Face repo",
-                    placeholder="unsloth/Llama-3.2-1B-Instruct-GGUF",
-                )
-                quant_dropdown = gr.Dropdown(
-                    label="Quantization", choices=[], value=None
-                )
-            with gr.Row():
-                profile_input = gr.Textbox(label="Profile", value="balanced")
-                threads_input = gr.Textbox(
-                    label="Thread sweep (csv)", placeholder="1,2,4"
-                )
-                concurrency_input = gr.Textbox(
-                    label="Concurrency sweep (csv)", placeholder="1,2,4"
-                )
-            log_box = gr.Textbox(label="Benchmark log", lines=15)
-            run_btn = gr.Button("Pull model + run benchmark", variant="primary")
-            repo_input.change(_list_quants, inputs=repo_input, outputs=quant_dropdown)
-            run_btn.click(
-                _pull_and_benchmark,
-                inputs=[repo_input, quant_dropdown, profile_input, threads_input, concurrency_input],
-                outputs=log_box,
-            )
-
+    demo.armtune_theme = dark  # Gradio 6 passes theme at launch()
     return demo
 
 

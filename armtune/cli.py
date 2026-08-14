@@ -405,7 +405,11 @@ def dashboard(
 
     demo = build_dashboard(results_dir)
     console.print(f"[green]Dashboard: http://{host}:{port}[/]")
-    demo.launch(server_name=host, server_port=port)
+    demo.launch(
+        server_name=host,
+        server_port=port,
+        theme=getattr(demo, "armtune_theme", None),
+    )
 
 
 def _discover_model() -> str | None:
