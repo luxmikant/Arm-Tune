@@ -1,5 +1,119 @@
 import Link from "next/link";
 import { SiteFooter, SiteHeader } from "@/components/Chrome";
+import { evidence, hasEvidence, pctChange } from "@/lib/evidence";
+
+function EvidenceSection() {
+  if (hasEvidence(evidence)) {
+    return (
+      <div className="evidence-panel">
+        <div className="panel-head">
+          <span>measured on {evidence.hardware}</span>
+          <span>{evidence.model}</span>
+        </div>
+        {evidence.metrics.map((m) => {
+          const change = pctChange(m.baseline, m.tuned);
+          const improved = m.betterIsLower ? change < 0 : change > 0;
+          return (
+            <div className="metric-row" key={m.label}>
+              <div className="metric-label">
+                <span>{m.label}</span>
+                <small>
+                  baseline {m.baseline.toLocaleString()} → tuned{" "}
+                  {m.tuned.toLocaleString()} {m.unit}
+                </small>
+              </div>
+              <div className="bar-track">
+                <span
+                  className={improved ? "bar bar-green" : "bar bar-gray"}
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.max(
+                        8,
+                        (m.tuned / Math.max(m.baseline, m.tuned)) * 100
+                      )
+                    )}%`,
+                  }}
+                />
+              </div>
+              <strong>
+                {improved ? "" : "+"}
+                {change.toFixed(1)}%{" "}
+                <small>{improved ? "better" : "vs base"}</small>
+              </strong>
+            </div>
+          );
+        })}
+        <div className="evidence-footer">
+          <span>Recommended: <b>{evidence.tunedConfig}</b></span>
+          <span>
+            <a href={evidence.sourceUrl} target="_blank" rel="noreferrer">
+              Full artifacts (JSON · CSV · charts) ↗
+            </a>
+          </span>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="evidence-panel">
+      <div className="panel-head">
+        <span>evidence pipeline</span>
+        <span>GitHub native ARM64 runner</span>
+      </div>
+      <div className="metric-row">
+        <div className="metric-label">
+          <span>Reproducible by anyone</span>
+          <small>one click, no private hardware</small>
+        </div>
+        <div className="bar-track">
+          <span className="bar bar-green" style={{ width: "100%" }} />
+        </div>
+        <strong>
+          1 <small>click</small>
+        </strong>
+      </div>
+      <div className="metric-row">
+        <div className="metric-label">
+          <span>Workload</span>
+          <small>fixed prompts · fixed seeds · quality-gated</small>
+        </div>
+        <div className="bar-track">
+          <span className="bar bar-blue" style={{ width: "86%" }} />
+        </div>
+        <strong>
+          6 <small>requests/run</small>
+        </strong>
+      </div>
+      <div className="metric-row">
+        <div className="metric-label">
+          <span>Evidence captured</span>
+          <small>JSON · CSV · Markdown · Performix</small>
+        </div>
+        <div className="bar-track">
+          <span className="bar bar-gray" style={{ width: "70%" }} />
+        </div>
+        <strong>
+          CI <small>artifacts</small>
+        </strong>
+      </div>
+      <div className="evidence-footer">
+        <span>
+          Run it yourself: <b>Actions → Benchmark ARM64 → Run workflow</b>
+        </span>
+        <span>
+          <a
+            href="https://github.com/luxmikant/Arm-Tune/actions/workflows/benchmark-arm64.yml"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Launch the benchmark ↗
+          </a>
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function HomePage() {
   return (
@@ -217,61 +331,11 @@ export default function HomePage() {
               <small>captured with the workload</small>
             </div>
           </div>
-          <div className="evidence-panel">
-            <div className="panel-head">
-              <span>configuration comparison</span>
-              <span>Neoverse-N2 / aarch64</span>
-            </div>
-            <div className="metric-row">
-              <div className="metric-label">
-                <span>Q8_0 / generic</span>
-                <small>baseline</small>
-              </div>
-              <div className="bar-track">
-                <span className="bar bar-gray" style={{ width: "52%" }} />
-              </div>
-              <strong>
-                11.8 <small>tok/s</small>
-              </strong>
-            </div>
-            <div className="metric-row selected">
-              <div className="metric-label">
-                <span>Q4_K_M / KleidiAI</span>
-                <small>recommended</small>
-              </div>
-              <div className="bar-track">
-                <span className="bar bar-green" style={{ width: "91%" }} />
-              </div>
-              <strong>
-                18.4 <small>tok/s</small>
-              </strong>
-            </div>
-            <div className="metric-row">
-              <div className="metric-label">
-                <span>Q4_0 / KleidiAI</span>
-                <small>quality-safe</small>
-              </div>
-              <div className="bar-track">
-                <span className="bar bar-blue" style={{ width: "84%" }} />
-              </div>
-              <strong>
-                17.1 <small>tok/s</small>
-              </strong>
-            </div>
-            <div className="evidence-footer">
-              <span>Throughput</span>
-              <span>
-                Quality threshold: <b>0.50</b>
-              </span>
-              <span>
-                Recommendation: <b>Q4_K_M</b>
-              </span>
-            </div>
-          </div>
+          <EvidenceSection />
           <p className="disclaimer">
-            Illustrative dashboard view. Published benchmark values are
-            generated from the Arm64 workflow and stored as JSON, CSV, Markdown
-            and chart artifacts.
+            Every published number comes from the public ARM64 CI workflow and
+            is stored as JSON, CSV, Markdown and chart artifacts in the
+            repository. Nothing on this page is hand-typed.
           </p>
         </section>
 
