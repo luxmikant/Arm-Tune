@@ -123,18 +123,23 @@ Every published result should identify:
 - prompt set, warmup count, repetitions, seed, and output limit;
 - whether Arm Performix captured the inference process.
 
-Replace the placeholders below with measured values before publishing a result.
+Measured on GitHub's native ARM64 runner (Neoverse-N2, 4 cores, 15.6 GB)
+via the ArmTune `Benchmark ARM64` workflow, run 31790177140. Full artifacts
+are committed in the ArmTune repository under `docs/evidence/`.
 
-| Metric | Baseline | Recommended | Change |
+| Metric | Q4_K_M · 4 threads | Q4_0 · 4 threads | Change |
 |---|---:|---:|---:|
-| TTFT | `<fill after benchmark>` | `<fill after benchmark>` | `<fill>` |
-| Decode tokens/sec | `<fill after benchmark>` | `<fill after benchmark>` | `<fill>` |
-| P95 latency | `<fill after benchmark>` | `<fill after benchmark>` | `<fill>` |
-| Peak process RSS | `<fill after benchmark>` | `<fill after benchmark>` | `<fill>` |
-| Quality score | `<fill after benchmark>` | `<fill after benchmark>` | `<fill>` |
-| IPC from Performix | `<fill after benchmark>` | `<fill after benchmark>` | `<fill>` |
+| TTFT | 0.45 s | 0.33 s | -27% |
+| Decode tokens/sec | 26.1 | 33.0 | +26% |
+| P95 latency | 2.52 s | 1.91 s | -24% |
+| Peak process RSS | 1701 MB | 1616 MB | -5% |
+| Quality score | 1.00 | 1.00 | gate held |
+| IPC from Performix | pending capture | pending capture | — |
 
-Do not present placeholder values as performance claims.
+Thread sweep (Q4_K_M): 1 thread 8.1 tok/s → 2 threads 15.1 tok/s →
+4 threads 28.1 tok/s (3.5×). Generic vs KleidiAI builds were within noise
+for short-prompt decode on this 4-core N2 — decode is memory-bound GEMV,
+while KleidiAI's i8mm kernels accelerate quantized GEMM (prefill).
 
 ## Limitations
 

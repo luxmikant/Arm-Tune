@@ -32,8 +32,11 @@ Thread sweep (Q4_K_M, tuned run): 1 thread 8.1 tok/s -> 2 threads 15.1 tok/s ->
 
 Generic vs KleidiAI builds were within noise for short-prompt decode on this
 4-core N2 (27.3 vs 26.1 tok/s) — expected, since decode is memory-bound GEMV;
-KleidiAI's i8mm kernels accelerate quantized GEMM (prefill). See
-`docs/evidence/README-notes.md` for the full reading.
+KleidiAI's i8mm kernels accelerate quantized GEMM (prefill).
+The KleidiAI build flag was verified in a follow-up run (31791857839):
+`GGML_CPU_KLEIDIAI:BOOL=ON` in CMakeCache, and the rerun reproduced the
+numbers (28.5 vs 33.5 tok/s). See `docs/evidence/README-notes.md` for the
+full reading.
 
 ## Directories
 
