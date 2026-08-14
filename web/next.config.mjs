@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
-  images: { unoptimized: true },
   webpack: (config) => {
     // Windows filesystems (exFAT/VHDX/OneDrive-backed drives) can return
     // EISDIR from fs.readlink on regular files. Avoid symlink resolution and
