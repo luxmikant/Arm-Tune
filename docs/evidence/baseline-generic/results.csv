@@ -1,0 +1,11 @@
+profile,objective,ttft_s,prompt_tok_s,p50_latency_s,p95_latency_s,p99_latency_s,latency_stdev_s,queue_delay_s,throughput_tok_s,avg_tok_s,peak_ram_mb,peak_rss_mb,avg_cpu_pct,quality,successful,total_requests,total_completion_tokens,total_prompt_tokens,runtime,threads,batch_threads,concurrency,quantization,performix_status
+baseline,balanced,0.4568,97.3,1.9522,2.1797,2.1999,0.549,0.0,27.3,29.0,2397.0,1700.0,94.0,0.85,6,6,280,808,LlamaServerAdapter,4,0,1,Q4_K_M,attempted-no-output
+thread_1,balanced,1.6478,26.0,6.4025,7.5476,7.5986,1.8591,0.0,8.1,8.5,2191.0,1700.0,25.8,0.85,6,6,280,808,unknown,,,,,n/a
+thread_2,balanced,0.8444,51.3,3.3537,3.9663,3.9932,0.9579,0.0,15.3,16.1,2123.0,1700.0,50.1,0.85,6,6,280,808,unknown,,,,,n/a
+thread_4,balanced,0.4444,99.3,1.8003,2.1111,2.1241,0.5,0.0,28.5,29.9,2128.0,1700.0,95.1,0.85,6,6,280,808,unknown,,,,,n/a
+concurrency_1,balanced,0.4444,99.6,1.7876,2.1194,2.1299,0.4993,0.0,28.5,29.8,2122.0,1700.0,95.0,0.85,6,6,280,808,unknown,,,,,n/a
+baseline,balanced,0.3337,132.7,1.7212,1.9933,1.9996,0.3982,0.0,33.2,34.0,2064.0,1616.0,95.3,1.0,6,6,321,808,LlamaServerAdapter,4,0,1,Q4_0,attempted-no-output
+thread_1,balanced,1.2312,34.4,5.9359,6.891,6.9212,1.4836,0.0,9.7,10.1,2086.0,1616.0,25.8,1.0,6,6,321,808,unknown,,,,,n/a
+thread_2,balanced,0.6322,67.8,3.225,3.736,3.7487,0.7678,0.0,17.8,18.3,2058.0,1616.0,50.1,1.0,6,6,321,808,unknown,,,,,n/a
+thread_4,balanced,0.3332,133.0,1.7193,1.9839,1.9908,0.3999,0.0,33.3,34.2,1864.0,1616.0,95.3,1.0,6,6,321,808,unknown,,,,,n/a
+concurrency_1,balanced,0.3336,133.0,1.714,1.9859,1.9913,0.4037,0.0,33.4,34.3,1866.0,1616.0,95.4,1.0,6,6,321,808,unknown,,,,,n/a
