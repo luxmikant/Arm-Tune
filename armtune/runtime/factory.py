@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 from collections.abc import Callable
 from pathlib import Path
@@ -21,6 +22,14 @@ def _discover_model(profile: Profile) -> str | None:
         if ggufs:
             return str(ggufs[-1])
     return None
+
+
+def llama_server_available() -> bool:
+    """True if llama-server is on PATH or pointed to by ARMTUNE_LLAMA_SERVER."""
+    return (
+        shutil.which("llama-server") is not None
+        or bool(os.environ.get("ARMTUNE_LLAMA_SERVER"))
+    )
 
 
 def make_llama_server_adapter(profile: Profile) -> RuntimeAdapter:
@@ -73,7 +82,7 @@ def build_adapter_factory(runtime_backend: str = "auto") -> AdapterFactory:
         return make_mock_adapter
 
     # auto
-    if shutil.which("llama-server"):
+    if llama_server_available():
         return make_llama_server_adapter
 
     from importlib.util import find_spec

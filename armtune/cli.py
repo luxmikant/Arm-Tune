@@ -168,6 +168,16 @@ def benchmark(
         else runtime_backend
     )
 
+    def loud_factory(profile):
+        adapter = factory(profile)
+        if adapter.__class__.__name__ == "MockAdapter":
+            console.print(
+                "[bold red]WARNING: using the MOCK adapter - results are NOT "
+                "real measurements.[/] Install llama-server (or set "
+                "ARMTUNE_LLAMA_SERVER) for genuine benchmarks."
+            )
+        return adapter
+
     variants: list[tuple[str, str, str]] = []
     if model_path:
         variants.append((base_profile.name, model_path, base_profile.model.quantization.value))
@@ -197,7 +207,7 @@ def benchmark(
         prompts=prompt_texts,
         quality_scorer=QualityScorer(),
         results_dir=Path(output_dir),
-        adapter_factory=factory,
+        adapter_factory=loud_factory,
     )
 
     results: list[BenchmarkResult] = []
