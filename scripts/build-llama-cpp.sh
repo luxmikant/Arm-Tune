@@ -29,7 +29,8 @@ cmake --build llama.cpp/build-arm-opt --config Release -j "${JOBS}"
 
 echo "=== Verifying arm-optimized binary ==="
 ls -la llama.cpp/build-arm-opt/bin/llama-server
-llama.cpp/build-arm-opt/bin/llama-server --version 2>&1 | head -5 || true
+grep "GGML_CPU_KLEIDIAI" llama.cpp/build-arm-opt/CMakeCache.txt || echo "WARNING: GGML_CPU_KLEIDIAI not found in CMakeCache"
+llama.cpp/build-arm-opt/bin/llama-server --version 2>&1 || true
 
 if [ "${BUILD_GENERIC}" = "1" ]; then
     echo "=== Building generic baseline variant ==="

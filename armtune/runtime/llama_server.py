@@ -35,6 +35,8 @@ EVIDENCE_MARKERS = (
     "llm_load_tensors:",
     "n_threads",
     "KV buffer size",
+    "build:",
+    "llama threadpool",
 )
 
 
@@ -121,12 +123,14 @@ class LlamaServerAdapter(RuntimeAdapter):
         self._stderr_lines = []
         self._proc = subprocess.Popen(
             cmd,
-            stdout=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
         )
         self._reader = threading.Thread(target=self._collect_stderr, daemon=True)
         self._reader.start()
+        self._out_reader = threading.Thread(target=self._collect_stdout, daemon=True)
+        self._out_reader.start()
 
         deadline = time.time() + 120
         while time.time() < deadline:
@@ -150,6 +154,11 @@ class LlamaServerAdapter(RuntimeAdapter):
         assert self._proc is not None and self._proc.stderr is not None
         for line in self._proc.stderr:
             self._stderr_lines.append(line.rstrip())
+
+    def _collect_stdout(self) -> None:
+        assert self._proc is not None and self._proc.stdout is not None
+        for line in self._proc.stdout:
+            self._stderr_lines.append("[out] " + line.rstrip())
 
     def _extract_evidence(self) -> None:
         for line in self._stderr_lines:
@@ -355,9 +364,9 @@ class LlamaServerAdapter(RuntimeAdapter):
                 except Exception:
                     pass
             self._proc = None
-        if self._reader is not None:
-            self._reader.join(timeout=2)
-            self._reader = None
+        for reader in (self._reader, getattr(self, "_out_reader", None)):
+            if reader is not None:
+                reader.join(timeout=2)
 
     def is_available(self) -> bool:
         return shutil.which(self._binary) is not None
