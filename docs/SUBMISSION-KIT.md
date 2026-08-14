@@ -4,6 +4,27 @@ Everything for the Devpost form, copy-paste ready. Track: **Cloud AI**.
 
 ---
 
+## 0. The 30-second pitch
+
+> ~75 spoken words at normal pace. Say it when someone asks "what did you build?"
+
+> "Every LLM you deploy on an Arm server hides the same question: which
+> quantization, how many threads, what concurrency? The answer is a hardware
+> fact — but most developers guess. ArmTune Serve is an autotuner that stops
+> the guessing: it fingerprints your exact Arm CPU, sweeps the configurations
+> on a real llama-server, checks output quality, and hands you the launch
+> command. On our four-core Neoverse test it found a quantization swap worth
+> twenty-six percent more throughput — and anyone can re-run the whole thing
+> on free ARM64 CI with one click."
+
+If you only have 10 seconds, drop the middle:
+
+> "ArmTune Serve: an autotuner for LLM serving on Arm. It measures your CPU,
+> sweeps the configs, and hands you the launch command — with hardware-counter
+> evidence, reproducible on free ARM64 CI."
+
+---
+
 ## 1. Demo video — full narration script (2:45)
 
 > Read this aloud while recording. Screen actions are in brackets.
