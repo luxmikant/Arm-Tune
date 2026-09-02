@@ -41,5 +41,26 @@ jobs:
         with:
           name: python-distributions
           path: dist/
-      - name: Publish to PyPI
+      - name: Check whether project exists on PyPI
+        id: pypi-project
+        run: |
+          if curl -fsS https://pypi.org/pypi/armtune-serve/json >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Publish first release with API token
+        if: ${{ steps.pypi-project.outputs.exists == 'false' && secrets.PYPI_API_TOKEN != '' }}
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+      - name: Publish to PyPI with trusted publisher
+        if: ${{ steps.pypi-project.outputs.exists == 'true' }}
+        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Fail when first release token is missing
+        if: ${{ steps.pypi-project.outputs.exists == 'false' && secrets.PYPI_API_TOKEN == '' }}
+        run: |
+          echo "The project armtune-serve does not exist on PyPI yet."
+          echo "Set the PYPI_API_TOKEN repository secret for the first release, then rerun this job."
+          exit 1
