@@ -58,34 +58,33 @@ Arm Performix is used for the hardware-level evidence. The project also builds
 two llama.cpp variants on Arm64: a generic CPU baseline and an Arm-optimized
 KleidiAI/native build.
 
-## Quick start on Arm64 Linux
+## Quick start
 
 ```bash
-git clone https://github.com/luxmikant/Arm-Tune.git
-cd Arm-Tune
+# Install from PyPI
+pip install armtune-serve
 
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
+# Optional: guided GUI console
+pip install "armtune-serve[dashboard]"
+```
 
-# Install the optional Arm/runtime tooling.
-bash scripts/install-performix.sh
-bash scripts/build-llama-cpp.sh
+See [Installation guide](docs/INSTALL.md) for the full setup, including the
+Arm-specific runtime pieces (llama.cpp KleidiAI build, Arm Performix) and
+troubleshooting.
 
-# Inspect the machine and available Hugging Face quantizations.
+On an Arm64 Linux machine:
+
+```bash
 armtune detect
 armtune models list unsloth/Llama-3.2-1B-Instruct-GGUF
 
-# Benchmark the model and sweep Arm CPU settings.
 export ARMTUNE_LLAMA_SERVER=llama.cpp/build-arm-opt/bin/llama-server
 armtune benchmark \
   --profile configs/balanced.yaml \
   --repo unsloth/Llama-3.2-1B-Instruct-GGUF \
-  --quant Q4_K_M,Q4_0,Q8_0 \
-  --threads 1,2,4 \
-  --concurrency 1,2
+  --quant Q4_K_M,Q4_0 \
+  --threads 1,2,4
 
-# Inspect the recommendation and open the local dashboard.
 armtune recommend --latest --objective balanced
 armtune dashboard
 ```
@@ -132,6 +131,7 @@ transfers, and CPU-offloaded layers.
 
 | Document | Purpose |
 |---|---|
+| [Installation guide](docs/INSTALL.md) | pip install + Arm64 runtime setup + troubleshooting |
 | [Beginner's guide](docs/USAGE.md) | Install and run the complete flow |
 | [Architecture](docs/ARCHITECTURE.md) | Domain model, workflows, ADRs, contracts |
 | [Use-case justification](docs/JUSTIFICATION.md) | Why CPU-side Arm optimization matters |
