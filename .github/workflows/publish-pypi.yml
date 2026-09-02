@@ -49,18 +49,22 @@ jobs:
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
-      - name: Publish first release with API token
-        if: ${{ steps.pypi-project.outputs.exists == 'false' && secrets.PYPI_API_TOKEN != '' }}
+      - name: Publish to PyPI with trusted publisher
+        id: trusted-publish
+        continue-on-error: true
+        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Publish first release with API token fallback
+        if: ${{ steps.trusted-publish.outcome == 'failure' && steps.pypi-project.outputs.exists == 'false' && secrets.PYPI_API_TOKEN != '' }}
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
-      - name: Publish to PyPI with trusted publisher
-        if: ${{ steps.pypi-project.outputs.exists == 'true' }}
-        uses: pypa/gh-action-pypi-publish@release/v1
-      - name: Fail when first release token is missing
-        if: ${{ steps.pypi-project.outputs.exists == 'false' && secrets.PYPI_API_TOKEN == '' }}
+      - name: Fail when trusted publishing failed and token fallback is unavailable
+        if: ${{ steps.trusted-publish.outcome == 'failure' && (steps.pypi-project.outputs.exists == 'true' || secrets.PYPI_API_TOKEN == '') }}
         run: |
-          echo "The project armtune-serve does not exist on PyPI yet."
-          echo "Set the PYPI_API_TOKEN repository secret for the first release, then rerun this job."
+          echo "Trusted publishing to armtune-serve failed."
+          echo "Confirm the PyPI pending publisher matches owner=luxmikant, repository=Arm-Tune, workflow=publish-pypi.yml, environment=pypi."
+          if [ "${{ steps.pypi-project.outputs.exists }}" = "false" ]; then
+            echo "For a first release, either fix the pending publisher or set an account-scoped PYPI_API_TOKEN as a fallback."
+          fi
           exit 1
