@@ -1,7 +1,7 @@
 # Publishing ArmTune Serve to PyPI
 
 The project uses standard setuptools metadata and publishes through GitHub
-Actions trusted publishing after the project already exists on PyPI.
+Actions trusted publishing.
 
 ## Order matters — do this BEFORE creating the release
 
@@ -9,19 +9,9 @@ The publish workflow triggers on a GitHub Release. If the trusted publisher
 does not exist on PyPI when the release is created, the upload fails with
 `HTTPError: 400 Bad Request from https://upload.pypi.org/legacy/`.
 
-### Step 1 — Bootstrap the first release
+### Step 1 — Configure trusted publishing first
 
-For the very first release of `armtune-serve`, trusted publishing cannot create
-the new project name. Add a repository secret:
-
-- Name: `PYPI_API_TOKEN`
-- Value: a PyPI API token created from your account settings
-
-The workflow uses this token only when `armtune-serve` does not yet exist on
-PyPI. After the first successful upload, remove the secret if you want to rely
-only on trusted publishing.
-
-### Step 2 — Claim the project name on PyPI
+For the very first release of `armtune-serve`, create a pending publisher first:
 
 1. Create and verify a PyPI account at https://pypi.org/account/register/.
 2. Enable two-factor authentication.
@@ -33,6 +23,17 @@ only on trusted publishing.
    - Workflow name: `publish-pypi.yml`
    - Environment name: `pypi`
 5. The pending publisher claims the name before any upload.
+
+### Step 2 — Optional token fallback for first release
+
+If trusted publishing is not available yet, add a repository secret:
+
+- Name: `PYPI_API_TOKEN`
+- Value: a PyPI API token created from your account settings
+
+The workflow first tries trusted publishing. If that fails and
+`armtune-serve` does not yet exist on PyPI, it retries with this token.
+Use an account-scoped token so the first upload can create the project.
 
 If the project name has already been claimed by someone else, the pending
 publisher form will reject it. Pick a different name in `pyproject.toml`
@@ -83,10 +84,11 @@ armtune --version
 
 ### Upload failed with 400 Bad Request
 
-The `armtune-serve` project did not exist yet and `PYPI_API_TOKEN` was not set.
+Trusted publishing and the fallback token were both unable to create/upload the
+`armtune-serve` project.
 
-1. Add `PYPI_API_TOKEN` (Step 1) or ensure the project already exists on PyPI.
-2. Complete Step 2 above (pending trusted publisher).
+1. Complete Step 1 above and verify all pending publisher fields match exactly.
+2. If you use `PYPI_API_TOKEN`, make sure it is account-scoped.
 3. Open the failed workflow run and click **Re-run failed jobs**.
 4. No new release or tag is needed.
 
